@@ -1,4 +1,4 @@
-I find it particularly annoying that Emacs *shell* buffers do no toffer satisfactory completions, but xterm does. I even used ansi-term for a while because of this (oh god). What I really wanted was for Emacs to show completions via auto-complete.el, like every other mode I use often. This package hopes to deliver on that promise.
+I find it particularly annoying that Emacs *shell* buffers do not offer satisfactory completions, but xterm does. I even used ansi-term for a while because of this (oh god). What I really wanted was for Emacs to show completions via auto-complete.el, like every other mode I use often. This package hopes to deliver on that promise.
 
 Installation and more info: see .el file.
 
