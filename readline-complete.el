@@ -1,6 +1,7 @@
 ;;; readline-complete.el --- offers completions in shell mode 
      
 ;; Copyright (C) 2012 Christopher Monsanto
+;; Copyright (C) 2014 Dmitry Gutov
      
 ;; Author: Christopher Monsanto <chris@monsan.to>
 ;; Version: 1.0
@@ -52,16 +53,27 @@
 
 ;; ASIDE: if you call ssh from shell directly, add "-t" to explicit-ssh-args to enable terminal.
 
-;; Second, we need to install auto-complete.el. Go ahead and get that
-;; from http://cx4a.org/software/auto-complete/, and follow the
+;; Two completion frameworks are supported, you only need to pick one.
+
+;; Auto-Complete setup:
+
+;; Go ahead and get auto-complete.el from
+;; http://cx4a.org/software/auto-complete/, and follow the
 ;; instructions for setup.
 
-;; Third, we need to setup readline-complete and enable auto-complete.
+;; Then enable it in your init file.
 
-;; (require 'readline-complete)
-;;
 ;; (add-to-list 'ac-modes 'shell-mode)
 ;; (add-hook 'shell-mode-hook 'ac-rlc-setup-sources)
+
+;; Company setup:
+
+;; See installation instructions at http://company-mode.github.io/.
+
+;; Set up completion back-end:
+
+;; (push 'company-readline company-backends)
+;; (add-hook 'rlc-no-readline-hook (lambda () (company-mode -1)))
 
 ;; Finally, M-x shell, and start typing!
 
@@ -209,7 +221,7 @@ rlc-attempts * rlc-timeout seconds.")
               finally (run-hooks 'rlc-no-readline-hook))
       (set-process-filter proc filt))))
 
-;; Autocomplete
+;; Auto-Complete
 ;;
 
 (defvar ac-rlc-prompts
@@ -261,6 +273,21 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
      '((candidates . rlc-candidates)
        (prefix . ac-rlc-prefix-shell-dispatcher)
        (requires . 0))))
+
+;; Company
+;;
+
+;;;###autoload
+(defun company-readline (command &optional arg &rest _ignore)
+  "`company-mode' back-end using `readline-complete'."
+  (interactive (list 'interactive))
+  (case command
+    (interactive (company-begin-backend 'company-readline))
+    (prefix (save-excursion
+              (let ((pt (point))
+                    (beg (ac-rlc-prefix-shell-dispatcher)))
+                (and beg (buffer-substring-no-properties beg pt)))))
+    (candidates (rlc-candidates))))
 
 (provide 'readline-complete)
 
