@@ -258,6 +258,7 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (add-to-list 'ac-sources 'ac-source-shell)
   (add-hook 'rlc-no-readline-hook '(lambda () (auto-complete-mode -1))))
 
+;;;###autoload
 (defun ac-rlc-prefix-shell-dispatcher ()
   (let ((prefix (and (not isearch-mode)
                      (save-excursion
@@ -268,7 +269,8 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
     (when prefix
       (funcall prefix))))
 
-(eval-after-load "auto-complete" 
+;;;###autoload
+(eval-after-load 'auto-complete
   `(ac-define-source shell
      '((candidates . rlc-candidates)
        (prefix . ac-rlc-prefix-shell-dispatcher)
