@@ -119,6 +119,8 @@
 ;;   bandwidth to turn it on.
 ;;   bind 'set print-completions-horizontally on'.
 ;;
+;; Avoid newlines in the bash prompt. Completion won't work otherwise.
+;; I don't know the cause.
 
 ;; *** Note that this package works with READLINE. Maybe editline (BSD
 ;; programs), NOT haskeline (ghci, unfortunately). Shells that don't use
