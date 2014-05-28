@@ -48,6 +48,16 @@
 ;; your shell:
 
 ;; (setq explicit-shell-file-name "bash")
+;; (setq explicit-bash-args nil)
+;; (setq comint-process-echoes t)
+;; (setenv "EMACS" "")
+;; In a bash init file:
+;; [[ $INSIDE_EMACS ]] && stty echo
+
+;; ASIDE: Alternate install method to avoid bash init customizations. We
+;; can use a subshell, but lose some compatibility with other elisp
+;; packages.
+;; (setq explicit-shell-file-name "bash")
 ;; (setq explicit-bash-args '("-c" "export EMACS=; stty echo; bash"))
 ;; (setq comint-process-echoes t)
 
@@ -123,7 +133,6 @@
 ;;   as input according to its bindings. Best to make tab characters not
 ;;   replaced by the default binding "\C-i": complete. Instead:
 ;;   bind '"\C-i": self-insert'
-;;   
 
 ;; *** Note that this package works with READLINE. Maybe editline (BSD
 ;; programs), NOT haskeline (ghci, unfortunately). Shells that don't use
