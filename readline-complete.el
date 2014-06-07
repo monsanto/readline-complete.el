@@ -1,8 +1,8 @@
-;;; readline-complete.el --- offers completions in shell mode 
-     
+;;; readline-complete.el --- offers completions in shell mode
+
 ;; Copyright (C) 2012 Christopher Monsanto
 ;; Copyright (C) 2014 Dmitry Gutov
-     
+
 ;; Author: Christopher Monsanto <chris@monsan.to>
 ;; Version: 1.0
 
@@ -88,7 +88,7 @@
 ;; customizations. Consider putting some of the following lines in
 ;; your bashrc (you can test if we are using Emacs for the session by
 ;; testing [[ $INSIDE_EMACS ]]. Note that readline-complete should
-;; work with the default readline settings.  
+;; work with the default readline settings.
 
 ;; - bell-style: it is preferable to disable the bell.
 ;;   bind 'set bell-style none'
@@ -216,10 +216,23 @@ rlc-attempts * rlc-timeout seconds.")
     (unwind-protect
         (loop repeat rlc-attempts
               if (string-match regexp rlc-accumulated-input)
-              return (split-string (or (match-string 1 rlc-accumulated-input) ""))
+              return (unpath (split-string (or (match-string 1 rlc-accumulated-input) "")))
               else do (sleep-for rlc-timeout)
               finally (run-hooks 'rlc-no-readline-hook))
       (set-process-filter proc filt))))
+
+(defun unpath (candidates)
+  "If the full prefix is pathed, unpath CANDIDATES based on the length of path."
+  (let ((n (- (length (split-string (full-prefix-chars) "/")) 1)))
+    (if (> n 0)
+        (mapcar (lambda (candidate)
+                  (unpath-nth candidate n)) candidates)
+        candidates)))
+
+(defun unpath-nth (candidate n)
+  "Unpath CANDIDATE at depth N."
+  (let ((split-candidate (split-string candidate "/")))
+    (or (nth n split-candidate) candidate)))
 
 ;; Auto-Complete
 ;;
@@ -233,11 +246,11 @@ rlc-attempts * rlc-timeout seconds.")
     ("^lftp [^>]+> " ac-prefix-rlc-shell) ; lftp
     ("^\\[[0-9]+\\] pry([^>]> " ac-prefix-rlc-dot) ; pry
     ("^irb([^>]> " ac-prefix-rlc-dot) ; irb, need irb -r irb/completion
-    (,shell-prompt-pattern ac-prefix-rlc-shell) ; Shell
+    (,shell-prompt-pattern ac-prefix-rlc-dot) ; Shell
     )
   "ac-rlc works by checking the current prompt. This list holds
   all of ac-rlc's known prompts, along with an auto-complete
-  prefix to recognize contexts appropriate to the application. 
+  prefix to recognize contexts appropriate to the application.
 
 To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 
@@ -246,6 +259,8 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   nil)
 
 (defun ac-prefix-rlc-shell ()
+  ;; If completing a filepath, as below. Otherwise just search for space
+  (message "rlc-candidates: %s" (rlc-candidates))
   (if (re-search-backward "[ /]\\([^ /]*\\)\\=" nil t)
       (match-beginning 1)))
 
@@ -253,10 +268,30 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (if (re-search-backward "[^a-zA-Z0-9_.]\\([a-zA-Z0-9_.]+\\)\\=" nil t)
       (match-beginning 1)))
 
+(defun full-prefix ()
+  "Prefix back to the most recent whitespace."
+  (if (re-search-backward " \\([^ ]*\\)" nil t)
+      (match-beginning 1)))
+
 (defun ac-rlc-setup-sources ()
   "Add me to shell-mode-hook!"
   (add-to-list 'ac-sources 'ac-source-shell)
   (add-hook 'rlc-no-readline-hook '(lambda () (auto-complete-mode -1))))
+
+(defun prefix-chars-for-prefix (prefix-fun)
+  "Prefix as characters for function PREFIX-FUN."
+  (save-excursion
+    (let ((pt (point))
+          (beg (funcall prefix-fun)))
+      (and beg (buffer-substring-no-properties beg pt)))))
+
+(defun prefix-chars ()
+  "Prefix as characters."
+  (prefix-chars-for-prefix (lambda () (ac-rlc-prefix-shell-dispatcher))))
+
+(defun full-prefix-chars ()
+  "Full prefix as characters."
+  (prefix-chars-for-prefix (lambda () (full-prefix))))
 
 ;;;###autoload
 (defun ac-rlc-prefix-shell-dispatcher ()
@@ -285,10 +320,7 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-readline))
-    (prefix (save-excursion
-              (let ((pt (point))
-                    (beg (ac-rlc-prefix-shell-dispatcher)))
-                (and beg (buffer-substring-no-properties beg pt)))))
+    (prefix (prefix-chars))
     (candidates (rlc-candidates))))
 
 (provide 'readline-complete)
