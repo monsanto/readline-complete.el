@@ -18,3 +18,9 @@ Installation and more info: see .el file.
   ![](screenshots/ssh-host.png)
 * Ruby completion inside REPL:
   ![](screenshots/ruby.png)
+
+## Running the tests
+
+The tests are bootstrapped using [Cask](https://github.com/cask/cask) and run using [Buttercup](https://github.com/jorgenschaefer/emacs-buttercup).
+
+If you don't already have Cask installed, follow the install instructions, `cd` to the readline-complete project directory, and run `cask install`. The test suite can be run with `make test`.
