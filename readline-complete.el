@@ -260,7 +260,6 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 
 (defun ac-prefix-rlc-shell ()
   ;; If completing a filepath, as below. Otherwise just search for space
-  (message "rlc-candidates: %s" (rlc-candidates))
   (if (re-search-backward "[ /]\\([^ /]*\\)\\=" nil t)
       (match-beginning 1)))
 
