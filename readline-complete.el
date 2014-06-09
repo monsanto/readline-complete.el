@@ -230,9 +230,11 @@ rlc-attempts * rlc-timeout seconds.")
               finally (run-hooks 'rlc-no-readline-hook))
       (set-process-filter proc filt))))
 
+(defconst unpath-regex "/[^/]+")
+
 (defun unpath (candidates)
   "If the full prefix is pathed, unpath CANDIDATES based on the length of path."
-  (let ((n (- (length (split-string (full-prefix-chars) "/")) 1)))
+  (let ((n (- (length (split-string (full-prefix-chars) unpath-regex)) 1)))
     (if (> n 0)
         (mapcar (lambda (candidate)
                   (unpath-nth candidate n)) candidates)
@@ -240,7 +242,8 @@ rlc-attempts * rlc-timeout seconds.")
 
 (defun unpath-nth (candidate n)
   "Unpath CANDIDATE at depth N."
-  (let ((split-candidate (split-string candidate "/")))
+  (message "unpathing candidate %s at depth %d" candidate n)
+  (let ((split-candidate (split-string candidate unpath-regex)))
     (or (nth n split-candidate) candidate)))
 
 ;; Auto-Complete
