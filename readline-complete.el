@@ -332,10 +332,14 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 (defun company-readline (command &optional arg &rest _ignore)
   "`company-mode' back-end using `readline-complete'."
   (interactive (list 'interactive))
-  (case command
-    (interactive (company-begin-backend 'company-readline))
-    (prefix (prefix-chars))
-    (candidates (rlc-candidates))))
+  (let ((pfx (prefix-chars))
+        (cdts (rlc-candidates)))
+    ;; (message "prefix: %s" pfx)
+    ;; (message "candidates: %s" cdts)
+    (case command
+      (interactive (company-begin-backend 'company-readline))
+      (prefix pfx)
+      (candidates cdts))))
 
 (provide 'readline-complete)
 
