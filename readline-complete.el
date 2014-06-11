@@ -231,9 +231,12 @@ rlc-attempts * rlc-timeout seconds.")
       (set-process-filter proc filt))))
 
 (defconst interpath-separator-regex "/[^ /]+")
+(defconst path-separator-regex "/")
 
 (defun unpath (candidates)
   "If the full prefix is pathed, unpath CANDIDATES based on the length of path."
+  ;; (debug-message "Unpathing candidates %s" candidates)
+  ;; (debug-message "Full prefix: %s" (full-prefix-chars))
   (let ((n (- (length (split-string (full-prefix-chars) interpath-separator-regex)) 1)))
     (if (> n 0)
         (mapcar (lambda (candidate)
@@ -242,8 +245,9 @@ rlc-attempts * rlc-timeout seconds.")
 
 (defun unpath-nth (candidate n)
   "Unpath CANDIDATE at depth N."
-  (message "unpathing candidate %s at depth %d" candidate n)
-  (let ((split-candidate (split-string candidate interpath-separator-regex)))
+  ;; (debug-message "Unpathing %s at %d" candidate n)
+  (let ((split-candidate (split-string candidate path-separator-regex)))
+    ;; (debug-message "Split candidate: %s" split-candidate)
     (or (nth n split-candidate) candidate)))
 
 ;; Auto-Complete
@@ -280,8 +284,8 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
       (match-beginning 1)))
 
 (defun full-prefix ()
-  "Prefix back to the most recent whitespace."
-  (if (re-search-backward " \\([^ ]*\\)" nil t)
+  "Prefix back to the most recent break character."
+  (if (re-search-backward "[ =]\\([^ =]*\\)" nil t)
       (match-beginning 1)))
 
 (defun ac-rlc-setup-sources ()
@@ -334,8 +338,8 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (interactive (list 'interactive))
   (let ((pfx (prefix-chars))
         (cdts (rlc-candidates)))
-    ;; (message "prefix: %s" pfx)
-    ;; (message "candidates: %s" cdts)
+    ;; (debug-message "prefix: %s" pfx)
+    ;; (debug-message "candidates: %s" cdts)
     (case command
       (interactive (company-begin-backend 'company-readline))
       (prefix pfx)
