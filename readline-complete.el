@@ -1,4 +1,4 @@
-;;; readline-complete.el --- offers completions in shell mode
+;;; readline-complete.el --- offers completions in shell mode -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2012 Christopher Monsanto
 ;; Copyright (C) 2014 Dmitry Gutov
@@ -173,6 +173,9 @@ rlc-attempts * rlc-timeout seconds.")
 
 (defvar last-candidates nil)
 
+(defun rlc-candidates-async (callback)
+  (funcall callback (rlc-candidates)))
+
 (defun rlc-candidates ()
   "Return the list of completions that readline would have given via completion-menu."
   (if (string= last-prefix-chars (prefix-chars))
@@ -345,15 +348,11 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 (defun company-readline (command &optional arg &rest _ignore)
   "`company-mode' back-end using `readline-complete'."
   (interactive (list 'interactive))
-  (message "called company-readline with %s" command)
-  (let ((pfx (prefix-chars))
-        (cdts (rlc-candidates)))
-    ;; (message "prefix: %s" pfx)
-    ;; (message "candidates: %s" cdts)
-    (case command
-      (interactive (company-begin-backend 'company-readline))
-      (prefix pfx)
-      (candidates cdts))))
+  (case command
+    (interactive (company-begin-backend 'company-readline))
+    (prefix (prefix-chars))
+    (candidates (cons :async
+                      (lambda (callback) (rlc-candidates-async callback))))))
 
 (provide 'readline-complete)
 
