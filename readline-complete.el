@@ -169,18 +169,18 @@ rlc-attempts * rlc-timeout seconds.")
   "Process filter which accumulates text in `rlc-accumulated-input'."
   (setq rlc-accumulated-input (concat rlc-accumulated-input string)))
 
-(defvar last-prefix-chars "")
+(defvar rlc-last-prefix-chars "")
 
-(defvar last-candidates nil)
+(defvar rlc-last-candidates nil)
 
 (defun rlc-candidates-async (callback)
   (funcall callback (rlc-candidates)))
 
 (defun rlc-candidates ()
   "Return the list of completions that readline would have given via completion-menu."
-  (if (string= last-prefix-chars (prefix-chars))
-      last-candidates
-    (setq last-candidates
+  (if (string= rlc-last-prefix-chars (rlc-prefix-chars))
+      rlc-last-candidates
+    (setq rlc-last-candidates
           (let* ((proc (get-buffer-process (current-buffer)))
                  (filt (process-filter proc))
                  (current-command (buffer-substring-no-properties
@@ -226,7 +226,7 @@ rlc-attempts * rlc-timeout seconds.")
                           "\\)"
                                         ;"$"
                           )))
-            (setq last-prefix-chars (prefix-chars))
+            (setq rlc-last-prefix-chars (rlc-prefix-chars))
             (setq rlc-accumulated-input "")
             (set-process-filter proc 'rlc-filter)
             (process-send-string proc (concat current-command
@@ -241,22 +241,22 @@ rlc-attempts * rlc-timeout seconds.")
                       finally (run-hooks 'rlc-no-readline-hook))
               (set-process-filter proc filt))))))
 
-(defconst interpath-separator-regex "/[^ /]+")
-(defconst path-separator-regex "/")
+(defconst rlc-interpath-separator-regex "/[^ /]+")
+(defconst rlc-path-separator-regex "/")
 
-(defun unpath (candidates)
+(defun rlc-unpath (candidates)
   "If the full prefix is pathed, unpath CANDIDATES based on the length of path."
-  ;; (message "Full prefix: %s" (full-prefix-chars))
-  (let ((n (- (length (split-string (full-prefix-chars) interpath-separator-regex)) 1)))
+  ;; (message "Full prefix: %s" (full-rlc-prefix-chars))
+  (let ((n (- (length (split-string (rlc-full-prefix-chars) rlc-interpath-separator-regex)) 1)))
     (if (> n 0)
         (mapcar (lambda (candidate)
-                  (unpath-nth candidate n)) candidates)
+                  (rlc-unpath-nth candidate n)) candidates)
         candidates)))
 
-(defun unpath-nth (candidate n)
+(defun rlc-unpath-nth (candidate n)
   "Unpath CANDIDATE at depth N."
   ;; (message "Unpathing %s at %d" candidate n)
-  (let* ((split-candidate (split-string candidate path-separator-regex))
+  (let* ((split-candidate (split-string candidate rlc-path-separator-regex))
          (nth-split (nth n split-candidate)))
     (if (and nth-split (not (string= "" nth-split)))
         nth-split
@@ -274,7 +274,7 @@ rlc-attempts * rlc-timeout seconds.")
     ("^lftp [^>]+> " ac-prefix-rlc-shell) ; lftp
     ("^\\[[0-9]+\\] pry([^>]> " ac-prefix-rlc-dot) ; pry
     ("^irb([^>]> " ac-prefix-rlc-dot) ; irb, need irb -r irb/completion
-    (,shell-prompt-pattern ac-prefix-rlc-dot) ; Shell
+    (,shell-prompt-pattern ac-prefix-rlc-shell) ; Shell
     )
   "ac-rlc works by checking the current prompt. This list holds
   all of ac-rlc's known prompts, along with an auto-complete
@@ -287,17 +287,11 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   nil)
 
 (defun ac-prefix-rlc-shell ()
-  ;; If completing a filepath, as below. Otherwise just search for space
-  (if (re-search-backward "[ /]\\([^ /]*\\)\\=" nil t)
+  (if (re-search-backward "[ /=]\\([^ /=]*\\)\\=" nil t)
       (match-beginning 1)))
 
 (defun ac-prefix-rlc-dot ()
   (if (re-search-backward "[^a-zA-Z0-9_.]\\([a-zA-Z0-9_.]+\\)\\=" nil t)
-      (match-beginning 1)))
-
-(defun full-prefix ()
-  "Prefix back to the most recent break character."
-  (if (re-search-backward "[ =]\\([^ =]*\\)" nil t)
       (match-beginning 1)))
 
 (defun ac-rlc-setup-sources ()
@@ -305,20 +299,25 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (add-to-list 'ac-sources 'ac-source-shell)
   (add-hook 'rlc-no-readline-hook '(lambda () (auto-complete-mode -1))))
 
-(defun prefix-chars-for-prefix (prefix-fun)
+(defun rlc-full-prefix ()
+  "Prefix back to the most recent break character."
+  (if (re-search-backward "[ =]\\([^ =]*\\)" nil t)
+      (match-beginning 1)))
+
+(defun rlc-full-prefix-chars ()
+  "Full prefix as characters."
+  (rlc-prefix-chars-for-prefix (lambda () (rlc-full-prefix))))
+
+(defun rlc-prefix-chars-for-prefix (prefix-fun)
   "Prefix as characters for function PREFIX-FUN."
   (save-excursion
     (let ((pt (point))
           (beg (funcall prefix-fun)))
       (and beg (buffer-substring-no-properties beg pt)))))
 
-(defun prefix-chars ()
+(defun rlc-prefix-chars ()
   "Prefix as characters."
-  (prefix-chars-for-prefix (lambda () (ac-rlc-prefix-shell-dispatcher))))
-
-(defun full-prefix-chars ()
-  "Full prefix as characters."
-  (prefix-chars-for-prefix (lambda () (full-prefix))))
+  (rlc-prefix-chars-for-prefix (lambda () (ac-rlc-prefix-shell-dispatcher))))
 
 ;;;###autoload
 (defun ac-rlc-prefix-shell-dispatcher ()
@@ -350,7 +349,7 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-readline))
-    (prefix (prefix-chars))
+    (prefix (rlc-prefix-chars))
     (candidates (cons :async
                       (lambda (callback) (rlc-candidates-async callback))))))
 
