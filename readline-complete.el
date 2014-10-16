@@ -119,6 +119,11 @@
 ;;   bandwidth to turn it on.
 ;;   bind 'set print-completions-horizontally on'.
 ;;
+;; - bindings: When a command is executed, readline processes the text
+;;   as input according to its bindings. Best to make tab characters not
+;;   replaced by the default binding "\C-i": complete. Instead:
+;;   bind '"\C-i": self-insert'
+;;   
 
 ;; *** Note that this package works with READLINE. Maybe editline (BSD
 ;; programs), NOT haskeline (ghci, unfortunately). Shells that don't use
