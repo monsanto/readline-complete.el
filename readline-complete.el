@@ -258,9 +258,10 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (if (re-search-backward "[^a-zA-Z0-9_.]\\([a-zA-Z0-9_.]+\\)\\=" nil t)
       (match-beginning 1)))
 
+;;;###autoload
 (defun ac-rlc-setup-sources ()
   "Add me to shell-mode-hook!"
-  (add-to-list 'ac-sources 'ac-source-shell)
+  (add-to-list 'ac-sources 'ac-source-readline)
   (add-hook 'rlc-no-readline-hook '(lambda () (auto-complete-mode -1))))
 
 ;;;###autoload
@@ -276,7 +277,7 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 
 ;;;###autoload
 (eval-after-load 'auto-complete
-  `(ac-define-source shell
+  `(ac-define-source readline
      '((candidates . rlc-candidates)
        (prefix . ac-rlc-prefix-shell-dispatcher)
        (requires . 0))))
