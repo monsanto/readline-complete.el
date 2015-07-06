@@ -135,6 +135,9 @@
 ;; editline instead of readline. Consider recompiling bash, python,
 ;; etc with readline support instead.
 
+;; *** Note: emacs contained a bug from ~24.3.91 to ~25.0.50.1 where
+;; completion on longer lines would fail and possibly erase your prompt.
+
 ;; Patches welcome! https://github.com/monsanto/readline-complete.el
 
 ;;; Code:
