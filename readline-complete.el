@@ -53,6 +53,10 @@
 
 ;; ASIDE: if you call ssh from shell directly, add "-t" to explicit-ssh-args to enable terminal.
 
+;; The simplest way is to install from melpa, and add to your init file:
+;; (require 'readline-complete)
+;; This package also supports lazy loading via a loaddefs file.
+
 ;; Two completion frameworks are supported, you only need to pick one.
 
 ;; Auto-Complete setup:
@@ -258,6 +262,7 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (if (re-search-backward "[^a-zA-Z0-9_.]\\([a-zA-Z0-9_.]+\\)\\=" nil t)
       (match-beginning 1)))
 
+;;;###autoload
 (defun ac-rlc-setup-sources ()
   "Add me to shell-mode-hook!"
   (add-to-list 'ac-sources 'ac-source-shell)
