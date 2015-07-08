@@ -281,10 +281,13 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 
 ;;;###autoload
 (eval-after-load 'auto-complete
-  `(ac-define-source shell
-     '((candidates . rlc-candidates)
-       (prefix . ac-rlc-prefix-shell-dispatcher)
-       (requires . 0))))
+  ;; eval to avoid compiling. compiler needs ac-define-source macro
+  ;; definition loaded or else we get runtime error, but we want to keep
+  ;; installation of auto-complete optional
+  '(eval '(ac-define-source shell
+            '((candidates . rlc-candidates)
+              (prefix . ac-rlc-prefix-shell-dispatcher)
+              (requires . 0)))))
 
 ;; Company
 ;;
