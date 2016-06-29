@@ -1,8 +1,8 @@
-;;; readline-complete.el --- offers completions in shell mode 
-     
+;;; readline-complete.el --- offers completions in shell mode -*- lexical-binding: t -*-
+
 ;; Copyright (C) 2012 Christopher Monsanto
 ;; Copyright (C) 2014 Dmitry Gutov
-     
+
 ;; Author: Christopher Monsanto <chris@monsan.to>
 ;; Version: 1.0
 
@@ -92,7 +92,7 @@
 ;; customizations. Consider putting some of the following lines in
 ;; your bashrc (you can test if we are using Emacs for the session by
 ;; testing [[ $INSIDE_EMACS ]]. Note that readline-complete should
-;; work with the default readline settings.  
+;; work with the default readline settings.
 
 ;; - bell-style: it is preferable to disable the bell.
 ;;   bind 'set bell-style none'
@@ -169,66 +169,98 @@ rlc-attempts * rlc-timeout seconds.")
   "Process filter which accumulates text in `rlc-accumulated-input'."
   (setq rlc-accumulated-input (concat rlc-accumulated-input string)))
 
+(defvar rlc-last-prefix-chars "")
+
+(defvar rlc-last-candidates nil)
+
+(defun rlc-candidates-async (callback)
+  (funcall callback (rlc-candidates)))
+
 (defun rlc-candidates ()
   "Return the list of completions that readline would have given via completion-menu."
-  (let* ((proc (get-buffer-process (current-buffer)))
-         (filt (process-filter proc))
-         (current-command (buffer-substring-no-properties
-                           (save-excursion (comint-bol) (point))
-                           (point)))
+  (if (string= rlc-last-prefix-chars (rlc-prefix-chars))
+      rlc-last-candidates
+    (setq rlc-last-candidates
+          (let* ((proc (get-buffer-process (current-buffer)))
+                 (filt (process-filter proc))
+                 (current-command (buffer-substring-no-properties
+                                   (save-excursion (comint-bol) (point))
+                                   (point)))
                                         ; Must start with 'n' to cancel menus.
-         (lentodel (+ (length current-command) (length "n*")))
+                 (lentodel (+ (length current-command) (length "n*")))
                                         ; Regexp matching readline output. Highly sensitive!
-         (regexp (concat; "^"
-                         (regexp-quote current-command)
-                         "\\(?:"
-                           ; branch one: more dialog?
-                           "\C-m?\n"
-                           "\\(?:\\(?:.*\n\\)+\\)" ; match a bunch of lines (ignored)
-                           "--More--\C-m\C-m" ; A more dialog...
-                           ".*?" ; prompt
-                           (regexp-quote current-command)
-                           "\\*" ; terminator
-                           (format "\\(?:\C-h \C-h\\)\\{%s\\}" (1- lentodel))
-                           "\C-g?" ; maybe bell at the end (too many deletions)
-                         "\\|"
-                           "\C-m?\n"
-                           "Display all [0-9]+ possibilities\\? (y or n)" ; branch two: too many.
-                           "\C-m?\n.*?" ; prompt
-                           (regexp-quote current-command)
-                           "\\*" ; A terminator
+                 (regexp (concat; "^"
+                          (regexp-quote current-command)
+                          "\\(?:"
+                                        ; branch one: more dialog?
+                          "\C-m?\n"
+                          "\\(?:\\(?:.*\n\\)+\\)" ; match a bunch of lines (ignored)
+                          "--More--\C-m\C-m" ; A more dialog...
+                          ".*?" ; prompt
+                          (regexp-quote current-command)
+                          "\\*" ; terminator
+                          (format "\\(?:\C-h \C-h\\)\\{%s\\}" (1- lentodel))
+                          "\C-g?" ; maybe bell at the end (too many deletions)
+                          "\\|"
+                          "\C-m?\n"
+                          "Display all [0-9]+ possibilities\\? (y or n)" ; branch two: too many.
+                          "\C-m?\n.*?" ; prompt
+                          (regexp-quote current-command)
+                          "\\*" ; A terminator
                                         ; Once for position backwards, once for space, once for reposition...
-                           (format "\\(?:\C-h \C-h\\)\\{%s\\}" (1- lentodel))
-                           "\C-g?" ; maybe bell at the end (too many deletions)
-                         "\\|"
-                           "\\(?:" ; branch three: enough
-                             "\C-m?\n"
-                             "\\(\\(?:.*\n\\)+\\)" ; success; match a bunch of lines
-                             ".*?" ; then match the prompt followed by our old input
+                          (format "\\(?:\C-h \C-h\\)\\{%s\\}" (1- lentodel))
+                          "\C-g?" ; maybe bell at the end (too many deletions)
+                          "\\|"
+                          "\\(?:" ; branch three: enough
+                          "\C-m?\n"
+                          "\\(\\(?:.*\n\\)+\\)" ; success; match a bunch of lines
+                          ".*?" ; then match the prompt followed by our old input
                                         ; stack overflow without non-greedy
-                             (regexp-quote current-command)
-                           "\\|"
-                             "\C-g?" ; maybe bell otherwise
-                           "\\)"
-                           "n\\*" ; Terminator
+                          (regexp-quote current-command)
+                          "\\|"
+                          "\C-g?" ; maybe bell otherwise
+                          "\\)"
+                          "n\\*" ; Terminator
                                         ; Once for position backwards, once for space, once for reposition...
-                           (format "\\(?:\C-h \C-h\\)\\{%s\\}" lentodel)
-                         "\\)"
-                         ;"$"
-                         )))
-    (setq rlc-accumulated-input "")
-    (set-process-filter proc 'rlc-filter)
-    (process-send-string proc (concat current-command
-                                      "\e?" ; show menu,
-                                      "n*" ; terminator
-                                      (make-string lentodel ?\C-h)))
-    (unwind-protect
-        (loop repeat rlc-attempts
-              if (string-match regexp rlc-accumulated-input)
-              return (split-string (or (match-string 1 rlc-accumulated-input) ""))
-              else do (sleep-for rlc-timeout)
-              finally (run-hooks 'rlc-no-readline-hook))
-      (set-process-filter proc filt))))
+                          (format "\\(?:\C-h \C-h\\)\\{%s\\}" lentodel)
+                          "\\)"
+                                        ;"$"
+                          )))
+            (setq rlc-last-prefix-chars (rlc-prefix-chars))
+            (setq rlc-accumulated-input "")
+            (set-process-filter proc 'rlc-filter)
+            (process-send-string proc (concat current-command
+                                              "\e?" ; show menu,
+                                              "n*" ; terminator
+                                              (make-string lentodel ?\C-h)))
+            (unwind-protect
+                (loop repeat rlc-attempts
+                      if (string-match regexp rlc-accumulated-input)
+                      return (unpath (split-string (or (match-string 1 rlc-accumulated-input) "")))
+                      else do (sleep-for rlc-timeout)
+                      finally (run-hooks 'rlc-no-readline-hook))
+              (set-process-filter proc filt))))))
+
+(defconst rlc-interpath-separator-regex "/[^ /]+")
+(defconst rlc-path-separator-regex "/")
+
+(defun rlc-unpath (candidates)
+  "If the full prefix is pathed, unpath CANDIDATES based on the length of path."
+  ;; (message "Full prefix: %s" (full-rlc-prefix-chars))
+  (let ((n (- (length (split-string (rlc-full-prefix-chars) rlc-interpath-separator-regex)) 1)))
+    (if (> n 0)
+        (mapcar (lambda (candidate)
+                  (rlc-unpath-nth candidate n)) candidates)
+        candidates)))
+
+(defun rlc-unpath-nth (candidate n)
+  "Unpath CANDIDATE at depth N."
+  ;; (message "Unpathing %s at %d" candidate n)
+  (let* ((split-candidate (split-string candidate rlc-path-separator-regex))
+         (nth-split (nth n split-candidate)))
+    (if (and nth-split (not (string= "" nth-split)))
+        nth-split
+      candidate)))
 
 ;; Auto-Complete
 ;;
@@ -246,7 +278,7 @@ rlc-attempts * rlc-timeout seconds.")
     )
   "ac-rlc works by checking the current prompt. This list holds
   all of ac-rlc's known prompts, along with an auto-complete
-  prefix to recognize contexts appropriate to the application. 
+  prefix to recognize contexts appropriate to the application.
 
 To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
 
@@ -255,18 +287,37 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   nil)
 
 (defun ac-prefix-rlc-shell ()
-  (if (re-search-backward "[ /]\\([^ /]*\\)\\=" nil t)
+  (if (re-search-backward "[ /=]\\([^ /=]*\\)\\=" nil t)
       (match-beginning 1)))
 
 (defun ac-prefix-rlc-dot ()
   (if (re-search-backward "[^a-zA-Z0-9_.]\\([a-zA-Z0-9_.]+\\)\\=" nil t)
       (match-beginning 1)))
 
-;;;###autoload
 (defun ac-rlc-setup-sources ()
   "Add me to shell-mode-hook!"
   (add-to-list 'ac-sources 'ac-source-shell)
   (add-hook 'rlc-no-readline-hook '(lambda () (auto-complete-mode -1))))
+
+(defun rlc-full-prefix ()
+  "Prefix back to the most recent break character."
+  (if (re-search-backward "[ =]\\([^ =]*\\)" nil t)
+      (match-beginning 1)))
+
+(defun rlc-full-prefix-chars ()
+  "Full prefix as characters."
+  (rlc-prefix-chars-for-prefix (lambda () (rlc-full-prefix))))
+
+(defun rlc-prefix-chars-for-prefix (prefix-fun)
+  "Prefix as characters for function PREFIX-FUN."
+  (save-excursion
+    (let ((pt (point))
+          (beg (funcall prefix-fun)))
+      (and beg (buffer-substring-no-properties beg pt)))))
+
+(defun rlc-prefix-chars ()
+  "Prefix as characters."
+  (rlc-prefix-chars-for-prefix (lambda () (ac-rlc-prefix-shell-dispatcher))))
 
 ;;;###autoload
 (defun ac-rlc-prefix-shell-dispatcher ()
@@ -298,11 +349,9 @@ To disable ac-rlc for an application, add '(prompt ac-prefix-rlc-disable).")
   (interactive (list 'interactive))
   (case command
     (interactive (company-begin-backend 'company-readline))
-    (prefix (save-excursion
-              (let ((pt (point))
-                    (beg (ac-rlc-prefix-shell-dispatcher)))
-                (and beg (buffer-substring-no-properties beg pt)))))
-    (candidates (rlc-candidates))))
+    (prefix (rlc-prefix-chars))
+    (candidates (cons :async
+                      (lambda (callback) (rlc-candidates-async callback))))))
 
 (provide 'readline-complete)
 
