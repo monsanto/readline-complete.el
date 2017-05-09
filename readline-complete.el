@@ -127,7 +127,17 @@
 ;;   as input according to its bindings. Best to make tab characters not
 ;;   replaced by the default binding "\C-i": complete. Instead:
 ;;   bind '"\C-i": self-insert'
-;;   
+;;
+;;  - windows emacs with cygwin: It's been reported to work with an
+;;  alternative startup of shell mode.  Install fakecygpty:
+;;  http://www.emacswiki.org/emacs/SshWithNTEmacs, then setup and call a
+;;  command:
+;; (defun cyg-bash ()
+;;   (interactive)
+;;   (let ((comint-process-echoes t))
+;;     (make-comint "cyg-bash" "fakecygpty" nil
+;;                  "d:/cygwin/bin/bash.exe"
+;;                  "-c" "export EMACS=; stty echo;d:/cygwin/bin/bash.exe" )))
 
 ;; *** Note that this package works with READLINE. Maybe editline (BSD
 ;; programs), NOT haskeline (ghci, unfortunately). Shells that don't use
